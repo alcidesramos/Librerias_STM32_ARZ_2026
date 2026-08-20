@@ -1,0 +1,47 @@
+########################################################
+# ReleaseNotes: 1.0.7 - January 2017
+########################################################
+January 6, 2017
+--------
+
+Overview
+    - Driver 1.0.7
+		. Code now fully checkpatch clean (except #typdef usage)
+    . Interrupt HIGH and OUT threshold bug-fix (See API Release Notes) 
+    
+    - Test application
+    . Added interrupt thresholds tests (options -O, -L, -H)
+    . Better manage CTRL+C test interruption 
+    . Makefile added
+
+    - API 1.0.4
+		. please see API release note
+
+########################################################
+# ReleaseNotes: 1.0.6 - November 2016
+########################################################
+November 03, 2016
+--------
+
+Overview
+    - Driver 1.0.6
+		. API upgraded.
+
+    - API 1.0.2
+		. please see API release note
+
+########################################################
+# ReleaseNotes: 1.0.5 - June 2016
+########################################################
+June 27, 2016
+--------
+
+Overview
+    - Driver 1.0.5
+		. First driver release.
+
+    - API 1.0.1
+		. please see API release note
+
+
+

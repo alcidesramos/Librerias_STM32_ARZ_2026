@@ -1,0 +1,18 @@
+// Declaración del buffer de datos y el índice del buffer
+#define MAX_BUFFER_SIZE 256
+char buffer[MAX_BUFFER_SIZE];
+volatile int buffer_index = 0;
+
+// Función de interrupción para recibir datos del puerto serie
+void USB_LP_CAN_RX0_IRQHandler(void) {
+    uint8_t received_data;
+
+    // Comprobar si se ha recibido un byte por el puerto serie
+    if (CDC_Receive_FS(&received_data, 1) == USBD_OK) {
+        // Almacenar el byte en el buffer
+        if (buffer_index < MAX_BUFFER_SIZE) {
+            buffer[buffer_index] = received_data;
+            buffer_index++;
+        }
+    }
+}

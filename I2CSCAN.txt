@@ -1,0 +1,13 @@
+//DEBE PONERSE <<1  A LA DIRECCION ENCONTRADA MICRO
+void I2C_SCAN(I2C_HandleTypeDef I2CMIO)
+{
+char buffer[32];
+	for (uint8_t addr = 0; addr < 127; addr++)
+	{
+		if (HAL_I2C_IsDeviceReady(&I2CMIO, addr << 1, 2, 2) == HAL_OK)
+		{
+			sprintf(buffer, "DIR: 0x%02X\r\n", addr);
+			uartx_write_text(&huart1, buffer);
+		}
+	}
+}

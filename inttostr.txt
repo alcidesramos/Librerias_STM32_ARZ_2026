@@ -1,0 +1,58 @@
+void reverse(char* str, int len)
+{
+int i = 0, j = len - 1, temp;
+		while (1 < j)
+	{
+		temp = str[i];
+		str[i] = str[j];
+		str[j] = temp;
+		i++;
+		j--;
+	}
+}
+//entero,cadena,numero de digitos, rellena con cero
+int intToStr(int x, char str[], int d)
+{
+
+int i = 0;
+	 while (x)
+	{
+
+	str[i++] = (x % 10) + '0';
+	x=x/ 10;
+		}
+	// If number of digits required is more, then
+	// add 0s at the beginning
+	while (i < d) str[i++] ='0';
+	reverse (str, i);
+	str[i] = '\0';
+	return i;
+}
+
+// Converts a f£loating-point/double number to a string.
+void floatostr(float n, char* res, int afterpoint)
+{
+// Extract integer part
+int ipart = (int) n;
+
+// Extract floating part
+float fpart = n - (float)ipart;
+
+// Convert integer part to string
+int i = intToStr(ipart, res, 0);
+
+// check for display option after point
+				if (afterpoint != 0)
+				{
+				res[i] = '.'; // add dot
+
+				// Get the value of fraction part upto given no.
+				// 0f points after dot. The third parameter
+				// 49 needed to handle cases like 233.007
+
+				fpart = fpart * pow(10, afterpoint);
+				intToStr( (int) fpart, res + i + 1, afterpoint);
+
+				}
+
+}

@@ -1,0 +1,5 @@
+ctr shit p
+
+CMake: Select Configure Preset
+
+selcionar debug    relase

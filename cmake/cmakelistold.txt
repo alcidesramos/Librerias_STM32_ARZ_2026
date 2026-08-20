@@ -1,0 +1,33 @@
+#sino funciona ejecutar comando  CMake: Delete Cache and Reconfigure
+
+# Habilitar soporte de float en printf/sprintf/scanf y vincular math.h (-lm)
+target_link_options(${CMAKE_PROJECT_NAME} PRIVATE
+    -u _printf_float
+    -lm
+)
+
+# Generar .hex y .bin automáticamente después de compilar
+add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_OBJCOPY} -O ihex $<TARGET_FILE:${CMAKE_PROJECT_NAME}> ${CMAKE_PROJECT_NAME}.hex
+    COMMAND ${CMAKE_OBJCOPY} -O binary $<TARGET_FILE:${CMAKE_PROJECT_NAME}> ${CMAKE_PROJECT_NAME}.bin
+    COMMAND ${CMAKE_SIZE} $<TARGET_FILE:${CMAKE_PROJECT_NAME}>
+    COMMENT "Generando ${CMAKE_PROJECT_NAME}.hex y ${CMAKE_PROJECT_NAME}.bin"
+)
+
+
+# Agregar automáticamente TODAS las librerías propias, incluyendo subcarpetas
+
+file(GLOB_RECURSE LIBRERIAS_SOURCES "${CMAKE_SOURCE_DIR}/Core/Src/librerias/*.c")
+target_sources(${CMAKE_PROJECT_NAME} PRIVATE ${LIBRERIAS_SOURCES})
+
+file(GLOB_RECURSE LIBRERIAS_WATCH "${CMAKE_SOURCE_DIR}/Core/Src/librerias/*")
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${LIBRERIAS_WATCH})
+
+
+
+# Optimización según tipo de build
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE -Og -g3)
+elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
+    target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE -O2 -g0)
+endif()

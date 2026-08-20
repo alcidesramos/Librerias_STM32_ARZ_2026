@@ -1,0 +1,12 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
+//poner procedimientos
+
+
+
+#ifdef __cplusplus
+}
+#endif

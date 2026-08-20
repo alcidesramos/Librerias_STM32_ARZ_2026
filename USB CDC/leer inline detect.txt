@@ -1,0 +1,35 @@
+// Declaración del buffer de datos y el índice del buffer
+#define MAX_BUFFER_SIZE 256
+char buffer[MAX_BUFFER_SIZE];
+volatile int buffer_index = 0;
+
+// Variables para la detección de tiempo de espera
+uint32_t last_byte_received_time = 0;
+uint32_t timeout_duration_ms = 1000; // 1 segundo
+
+// Función de interrupción para recibir datos del puerto serie
+void USB_LP_CAN_RX0_IRQHandler(void) {
+    uint8_t received_data;
+
+    // Comprobar si se ha recibido un byte por el puerto serie
+    if (CDC_Receive_FS(&received_data, 1) == USBD_OK) {
+        // Almacenar el byte en el buffer y actualizar el tiempo
+        if (buffer_index < MAX_BUFFER_SIZE) {
+            buffer[buffer_index] = received_data;
+            buffer_index++;
+
+            // Comprobar si se ha recibido el primer byte
+            if (buffer_index == 1) {
+                last_byte_received_time = HAL_GetTick(); // Guardar la hora actual
+            } else {
+                // Comprobar si se ha recibido el siguiente byte antes de que expire el temporizador
+                if (HAL_GetTick() - last_byte_received_time < timeout_duration_ms) {
+                    last_byte_received_time = HAL_GetTick(); // Reiniciar el temporizador
+                } else {
+                    // Se ha producido un tiempo de espera, devolver el buffer de datos almacenados
+                    return buffer;
+                }
+            }
+        }
+    }
+}

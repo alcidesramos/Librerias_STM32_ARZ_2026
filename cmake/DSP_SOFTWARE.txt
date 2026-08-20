@@ -1,0 +1,9 @@
+EN cmake\gcc-arm-none-eabi.cmake
+
+
+# MCU specific flags
+set(TARGET_FLAGS "-mcpu=cortex-m4 -mfpu=fpv4-sp-d16 -mfloat-abi=hard ")
+
+
+CAMBIAR POR
+set(TARGET_FLAGS "-mcpu=cortex-m4 -mfloat-abi=soft ")

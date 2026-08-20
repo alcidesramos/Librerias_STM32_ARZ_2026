@@ -1,0 +1,38 @@
+void numbertostr(uint32_t numero,unsigned char *cadena)
+{
+	//*cadena++=(numero/100000)+48;
+	*cadena++=((numero/10000)%10)+48;
+     *cadena++=((numero/1000)%10)+48;
+	*cadena++=((numero/100)%10)+48;
+      *cadena++=((numero/10)%10)+48;
+      *cadena++=((numero)%10)+48;
+      *cadena++= 0;
+}
+void numbertostr1(uint32_t numero,unsigned char *cadena)
+{
+	char flag_cero=0;
+
+	*cadena=(numero/100000)+48;
+	if((*cadena==48) &&(flag_cero==0)) flag_cero=1;
+	else *cadena++;
+
+	*cadena=((+numero/10000)%10)+48;
+	if((*cadena==48) &&(flag_cero==0)) flag_cero=1;
+	else *cadena++;
+
+	*cadena=((numero/1000)%10)+48;
+	if((*cadena==48) &&(flag_cero==0)) flag_cero=1;
+     else *cadena++;
+
+	*cadena=((numero/100)%10)+48;
+	if((*cadena==48) &&(flag_cero==0)) flag_cero=1;
+	else *cadena++;
+
+
+	*cadena=((numero/10)%10)+48;
+	if((*cadena==48) &&(flag_cero==0)) flag_cero=1;
+   else *cadena++;
+
+	*cadena++=((numero)%10)+48;
+      	 *cadena++= 0;
+}

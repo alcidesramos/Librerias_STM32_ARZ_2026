@@ -1,0 +1,31 @@
+#include "usbd_cdc_if.h"
+
+#define MAX_BUFFER_SIZE 256
+
+char buffer[MAX_BUFFER_SIZE];
+int buffer_index = 0;
+int is_buffer_full = 0;
+
+void read_usb_cdc_until_stop_char(char stop_char) {
+    uint8_t received_data;
+    int is_stop_char_received = 0;
+
+    // Leer datos del puerto serie hasta recibir el caracter de parada
+    while (!is_stop_char_received) {
+        if (CDC_Receive_FS(&received_data, 1) == USBD_OK) {
+            // Almacenar los datos en el buffer
+            if (buffer_index < MAX_BUFFER_SIZE) {
+                buffer[buffer_index] = received_data;
+                buffer_index++;
+            } else {
+                // El buffer está lleno, no se pueden almacenar más datos
+                is_buffer_full = 1;
+            }
+
+            // Comprobar si se ha recibido el caracter de parada
+            if (received_data == stop_char) {
+                is_stop_char_received = 1;
+            }
+        }
+    }
+}

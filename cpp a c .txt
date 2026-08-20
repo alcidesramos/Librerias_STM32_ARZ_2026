@@ -1,0 +1,33 @@
+//antes d elos includes
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
+
+
+
+//despues de los include
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
+
+
+
+
+
+
+
+
+
+
+
+//al final del codigo
+
+#ifdef __cplusplus
+}
+#endif

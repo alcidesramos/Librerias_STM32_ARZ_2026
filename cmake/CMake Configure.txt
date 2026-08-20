@@ -1,0 +1,6 @@
+CMake: Configure
+CMake: Reset CMake Tools Extension State
+
+
+#configura board
+Setup stm32cube project

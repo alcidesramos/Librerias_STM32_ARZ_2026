@@ -1,0 +1,8 @@
+      //osciloscopio serial
+
+//	sprintf(texto,"%.1f,%.1f\r",RPM,salida);
+	//uartx_write_text(&huart1, texto);
+
+		 	  	  //para teleplot
+		 	  //	sprintf(texto,">IN:%.1f\n",RPM);
+		 	  	//uartx_write_text(&huart1, texto);

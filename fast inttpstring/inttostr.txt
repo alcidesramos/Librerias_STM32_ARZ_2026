@@ -1,0 +1,34 @@
+// Fast int to ASCII conversion
+void PrintInt(int i) {
+    static const char asciiDigits[10] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' };
+    div_t n;
+    int print = 0;
+    if(i < 0) {
+        Serial.write('-');
+        i = -i;
+    }
+    if(i >= 10000) {
+        n = div(i, 10000);
+        Serial.write(asciiDigits[n.quot]);
+        i = n.rem;
+        print = 1;
+    }
+    if(i >= 1000 || print) {
+        n = div(i, 1000);
+        Serial.write(asciiDigits[n.quot]);
+        i = n.rem;
+        print = 1;
+    }
+    if(i >= 100 || print) {
+        n = div(i, 100);
+        Serial.write(asciiDigits[n.quot]);
+        i = n.rem;
+        print = 1;
+    }
+    if(i >= 10 || print) {
+        n = div(i, 10);
+        Serial.write(asciiDigits[n.quot]);
+        i = n.rem;
+    }
+    Serial.write(asciiDigits[i]);
+}

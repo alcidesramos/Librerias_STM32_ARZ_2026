@@ -1,0 +1,8 @@
+ctp shift p
+Preferences: Open Settings (UI)
+
+buscar
+
+Inlay Hints
+
+desactivar

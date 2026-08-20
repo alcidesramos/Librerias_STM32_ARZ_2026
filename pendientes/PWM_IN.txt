@@ -1,0 +1,51 @@
+//main
+
+
+extern TIM_HandleTypeDef htim1;
+
+PWMIn_t rc1 = {
+    .htim = &htim1,
+    .channel = {TIM_CHANNEL_1, TIM_CHANNEL_2, TIM_CHANNEL_3, TIM_CHANNEL_4},
+    .timeout_ms = 100,   // si pasan 100ms sin pulsos → duty=0
+};
+
+int main(void)
+{
+    PWMIn_Init(&rc1);
+
+    while (1)
+    {
+        PWMIn_Update_Timeout(&rc1, HAL_GetTick());
+
+        float ch1 = rc1.duty[0] / 10.0f;
+        float ch2 = rc1.duty[1] / 10.0f;
+
+        HAL_Delay(20);
+    }
+}
+
+
+//   en la interrpcion
+void TIM1_CC_IRQHandler(void)
+{
+    PWMIn_IRQ_Handler(&rc1);
+    HAL_TIM_IRQHandler(&htim1);
+}
+
+
+//crear otro timer
+PWMIn_t rc2 = {
+    .htim = &htim3,
+    .channel = {TIM_CHANNEL_1, TIM_CHANNEL_2, 0, 0},
+    .timeout_ms = 120,
+};
+
+// y agregar si irq
+void TIM3_CC_IRQHandler(void)
+{
+    PWMIn_IRQ_Handler(&rc2);
+    HAL_TIM_IRQHandler(&htim3);
+}
+
+
+
