@@ -2,7 +2,7 @@ instalar la extension
 
 VsCode Action Button
 
-ctr shift p
+ctr shift p O F1
 
 Preferences: Open User Settings (JSON)
 
@@ -27,3 +27,30 @@ y abajo antes de }   pegar
 
 
 GUARDA CTR S
+
+
+MAS COMPLETO
+
+"commands": [
+      {
+        "name": "🛠️CMake ARZ",
+        "color": "yellow",
+        "command": "pythonw \"D:\\DATOS\\ARM\\STM32\\Librerias\\MIAS\\Librerias\\cmakelist_Python.py\""
+      },
+      {
+        "name": "💻PROG ARZ",
+        "color": "white",
+        "command": "python \"D:\\DATOS\\ARM\\STM32\\Librerias\\MIAS\\Librerias\\prog.py\""
+      },
+        {
+        "name": "⚡FUSE ARZ",
+        "color": "yellow",
+        "command": "python \"D:\\DATOS\\ARM\\STM32\\Librerias\\MIAS\\Librerias\\fuse.py\""
+      },
+       {
+        "name": "💾FLASH ARZ",
+        "color": "white",
+        "command": "pythonw \"D:\\DATOS\\ARM\\STM32\\Librerias\\MIAS\\Librerias\\flash_tool.py\""
+      }
+    ]
+  }

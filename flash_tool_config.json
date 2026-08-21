@@ -1,0 +1,7 @@
+{
+  "loader": "MX25UM51245G_STM32N6570-NUCLEO.stldr",
+  "cubeprog_bin": "C:\\Program Files\\STMicroelectronics\\STM32Cube\\STM32CubeProgrammer\\bin",
+  "project_dir": "C:/Users/Alcides Ramos/Desktop/EMBEBIDOS/N6_LED",
+  "connect_mode": "UR",
+  "freq": "8000"
+}
