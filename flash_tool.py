@@ -25,6 +25,7 @@ import glob
 import json
 import os
 import queue
+import shutil
 import subprocess
 import sys
 import threading
@@ -38,7 +39,16 @@ from tkinter import filedialog, messagebox, ttk
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.join(SCRIPT_DIR, "flash_tool_config.json")
 
-FLASH_ADDRESS = "0x70000000"
+FSBL_FLASH_ADDRESS = "0x70000000"
+APPNS_FLASH_ADDRESS = "0x70100000"
+EXTERNAL_FLASH_BASE = "0x80000000"
+SIGNING_TOOL_NAME = "STM32_SigningTool_CLI.exe"
+OBJCOPY_CANDIDATES = (
+    "arm-none-eabi-objcopy",
+    "arm-none-eabi-objcopy.exe",
+    "objcopy",
+    "objcopy.exe",
+)
 
 CUBEPROGRAMMER_BIN_CANDIDATES = [
     r"C:\Program Files\STMicroelectronics\STM32Cube\STM32CubeProgrammer\bin",
@@ -77,6 +87,14 @@ def find_cubeprogrammer_bin():
     return None
 
 
+def find_objcopy():
+    for name in OBJCOPY_CANDIDATES:
+        found = shutil.which(name)
+        if found:
+            return found
+    return None
+
+
 def default_project_dir():
     # tools/ vive en la raiz del proyecto -> la carpeta padre es la raiz
     return os.path.abspath(os.path.join(SCRIPT_DIR, ".."))
@@ -91,7 +109,7 @@ class FlashToolApp:
     def __init__(self, root):
         self.root = root
         self.root.title("N6 FSBL - Flash Tool_ARZ")
-        self.root.geometry("880x560")
+        self.root.geometry("1000x560")
 
         self.cfg = load_config()
         self.project_dir = tk.StringVar(
@@ -154,17 +172,31 @@ class FlashToolApp:
 
         self.btn_generate = ttk.Button(
             btns,
-            text="1) Generar trusted.bin",
-            command=self._on_generate,
+            text="1) Generar FSBL_trusted.bin",
+            command=self._on_generate_fsbl,
         )
         self.btn_generate.pack(side="left", padx=4)
 
+        self.btn_generate_app = ttk.Button(
+            btns,
+            text="2) Generar AppNonSecure_trusted.bin",
+            command=self._on_generate_appns,
+        )
+        self.btn_generate_app.pack(side="left", padx=4)
+
         self.btn_program = ttk.Button(
             btns,
-            text=f"2) Programar en flash externa ({FLASH_ADDRESS})",
-            command=self._on_program,
+            text=f"3) Programar FSBL firmado en {FSBL_FLASH_ADDRESS}",
+            command=self._on_program_fsbl,
         )
         self.btn_program.pack(side="left", padx=4)
+
+        self.btn_program_app = ttk.Button(
+            btns,
+            text=f"4) Programar AppNS firmado en {APPNS_FLASH_ADDRESS}",
+            command=self._on_program_appns,
+        )
+        self.btn_program_app.pack(side="left", padx=4)
 
         self.btn_reset = ttk.Button(
             btns,
@@ -208,7 +240,9 @@ class FlashToolApp:
         self.busy = busy
         state = "disabled" if busy else "normal"
         self.btn_generate.configure(state=state)
+        self.btn_generate_app.configure(state=state)
         self.btn_program.configure(state=state)
+        self.btn_program_app.configure(state=state)
         self.btn_reset.configure(state=state)
         if status:
             self.status_var.set(status)
@@ -221,11 +255,11 @@ class FlashToolApp:
             save_config(self.cfg)
             self._refresh_loaders()
 
-    def _fsbl_dir(self):
-        return os.path.join(self.project_dir.get(), "FSBL")
+    def _project_dir(self, project_name):
+        return os.path.join(self.project_dir.get(), project_name)
 
-    def _build_dir(self):
-        return os.path.join(self._fsbl_dir(), "build")
+    def _build_dir(self, project_name):
+        return os.path.join(self._project_dir(project_name), "build")
 
     def _toolchain_file(self):
         return os.path.join(self.project_dir.get(), "gcc-arm-none-eabi.cmake")
@@ -263,94 +297,110 @@ class FlashToolApp:
                 "Verifica la instalacion de STM32CubeProgrammer."
             )
 
-    def _find_trusted_bin(self):
-        pattern = os.path.join(self._build_dir(), "*_trusted.bin")
+    def _find_trusted_bin(self, project_name="FSBL"):
+        pattern = os.path.join(self._build_dir(project_name), "*_trusted.bin")
         matches = glob.glob(pattern)
         if not matches:
             return None
         return max(matches, key=os.path.getmtime)
 
-    # ------------------------------------------------------------ actions --
+    def _find_latest_file(self, directory, patterns):
+        matches = []
+        for pattern in patterns:
+            matches.extend(glob.glob(os.path.join(directory, pattern)))
+        if not matches:
+            return None
+        return max(matches, key=os.path.getmtime)
 
-    def _run_command(self, cmd, cwd, on_done):
-        """Ejecuta cmd en un hilo aparte, redirigiendo la salida al log."""
+    def _objcopy_to_bin(self, elf_path):
+        objcopy = find_objcopy()
+        if not objcopy:
+            raise FileNotFoundError(
+                "No se encontro objcopy de la toolchain ARM en PATH. "
+                "Instala arm-none-eabi-objcopy o añade la toolchain al PATH."
+            )
 
-        def worker():
-            self._log(f"\n$ {' '.join(cmd)}")
-            try:
-                proc = subprocess.Popen(
-                    cmd,
-                    cwd=cwd,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.STDOUT,
-                    text=True,
-                    bufsize=1,
-                )
-            except OSError as exc:
-                self._log(f"[ERROR] No se pudo ejecutar el comando: {exc}")
-                self.root.after(0, lambda: on_done(False))
-                return
+        bin_path = os.path.splitext(elf_path)[0] + ".bin"
+        cmd = [objcopy, "-O", "binary", "-S", elf_path, bin_path]
+        self._log(f"\n$ {' '.join(cmd)}")
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        if result.stdout:
+            self._log(result.stdout.rstrip())
+        if result.stderr:
+            self._log(result.stderr.rstrip())
+        if result.returncode != 0:
+            raise RuntimeError(f"Fallo al convertir ELF a BIN: {elf_path}")
+        return bin_path
 
-            for line in proc.stdout:
-                self._log(line.rstrip())
-            proc.wait()
-            ok = proc.returncode == 0
-            if not ok:
-                self._log(f"[ERROR] Comando terminado con codigo {proc.returncode}")
-            self.root.after(0, lambda: on_done(ok))
+    def _sign_bin(self, raw_bin_path, output_bin_path, sign_type="fsbl"):
+        if not self.cubeprog_bin or not os.path.isdir(self.cubeprog_bin):
+            raise FileNotFoundError(
+                "No se encontro la carpeta bin de STM32CubeProgrammer para usar el Signing Tool."
+            )
 
-        threading.Thread(target=worker, daemon=True).start()
+        signing_tool = os.path.join(self.cubeprog_bin, SIGNING_TOOL_NAME)
+        if not os.path.isfile(signing_tool):
+            raise FileNotFoundError(
+                f"No se encontro {SIGNING_TOOL_NAME} en: {self.cubeprog_bin}"
+            )
 
-    def _on_generate(self):
-        if self.busy:
-            return
-        fsbl_dir = self._fsbl_dir()
-        build_dir = self._build_dir()
+        cmd = [
+            signing_tool,
+            "-bin",
+            raw_bin_path,
+            "-nk",
+            "-of",
+            EXTERNAL_FLASH_BASE,
+            "-t",
+            sign_type,
+            "-hv",
+            "2.3",
+            "-align",
+            "-o",
+            output_bin_path,
+            "-s",
+        ]
+        self._log(f"\n$ {' '.join(cmd)}")
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        if result.stdout:
+            self._log(result.stdout.rstrip())
+        if result.stderr:
+            self._log(result.stderr.rstrip())
+        if result.returncode != 0:
+            raise RuntimeError(f"Fallo al firmar el binario: {raw_bin_path}")
+        return output_bin_path
 
-        if not os.path.isdir(fsbl_dir):
+    def _build_project(self, project_name, on_done, friendly_name=None):
+        project_name = project_name.strip()
+        source_dir = self._project_dir(project_name)
+        build_dir = self._build_dir(project_name)
+        label = friendly_name or project_name
+
+        if not os.path.isdir(source_dir):
             messagebox.showerror(
                 "Carpeta invalida",
-                f"No se encontro la carpeta FSBL en:\n{fsbl_dir}",
+                f"No se encontro la carpeta {project_name} en:\n{source_dir}",
             )
             return
 
-        self._set_busy(True, "Compilando FSBL y generando trusted.bin...")
+        def after_build(ok):
+            on_done(ok, source_dir, build_dir)
 
         def after_configure(ok):
             if not ok:
-                self._set_busy(False, "Fallo la configuracion de CMake.")
-                messagebox.showerror("Error", "Fallo la configuracion de CMake. Revisa el log.")
+                self._set_busy(False, f"Fallo la configuracion de {label}.")
+                messagebox.showerror("Error", f"Fallo la configuracion de {label}. Revisa el log.")
                 return
-            self._run_command(
-                ["cmake", "--build", build_dir],
-                cwd=fsbl_dir,
-                on_done=after_build,
-            )
-
-        def after_build(ok):
-            if not ok:
-                self._set_busy(False, "Fallo la compilacion.")
-                messagebox.showerror("Error", "Fallo la compilacion. Revisa el log.")
-                return
-            trusted = self._find_trusted_bin()
-            if trusted:
-                self._log(f"\nOK -> {trusted}")
-                self._set_busy(False, f"trusted.bin generado: {os.path.basename(trusted)}")
-            else:
-                self._set_busy(
-                    False,
-                    "Compilacion OK pero no se encontro *_trusted.bin "
-                    "(revisa STM32_SigningTool_CLI en el log).",
-                )
+            self._run_command(["cmake", "--build", build_dir], cwd=source_dir, on_done=after_build)
 
         if os.path.isfile(os.path.join(build_dir, "CMakeCache.txt")):
-            self._run_command(["cmake", "--build", build_dir], cwd=fsbl_dir, on_done=after_build)
+            self._run_command(["cmake", "--build", build_dir], cwd=source_dir, on_done=after_build)
         else:
-            self._log("Carpeta de build no configurada todavia, configurando...")
+            self._log(f"Carpeta de build de {label} no configurada todavia, configurando...")
             cmd = [
                 "cmake",
                 "-S",
-                fsbl_dir,
+                source_dir,
                 "-B",
                 build_dir,
                 "-G",
@@ -358,21 +408,27 @@ class FlashToolApp:
                 f"-DCMAKE_TOOLCHAIN_FILE={self._toolchain_file()}",
                 "-DCMAKE_BUILD_TYPE=Debug",
             ]
-            self._run_command(cmd, cwd=fsbl_dir, on_done=after_configure)
+            self._run_command(cmd, cwd=source_dir, on_done=after_configure)
 
-    def _on_program(self):
-        if self.busy:
-            return
+    def _prepare_signed_image(self, project_name, sign_type="fsbl"):
+        build_dir = self._build_dir(project_name)
+        trusted = self._find_trusted_bin(project_name)
+        if trusted:
+            return trusted
 
-        trusted = self._find_trusted_bin()
-        if not trusted:
-            messagebox.showerror(
-                "Falta trusted.bin",
-                "No se encontro ningun *_trusted.bin en FSBL/build.\n"
-                "Presiona primero '1) Generar trusted.bin'.",
-            )
-            return
+        raw_bin = self._find_latest_file(build_dir, ["*.bin"])
+        if not raw_bin:
+            latest_elf = self._find_latest_file(build_dir, ["*.elf"])
+            if latest_elf:
+                raw_bin = self._objcopy_to_bin(latest_elf)
+        if not raw_bin:
+            return None
 
+        output_name = f"{os.path.splitext(os.path.basename(raw_bin))[0]}_trusted.bin"
+        output_bin = os.path.join(os.path.dirname(raw_bin), output_name)
+        return self._sign_bin(raw_bin, output_bin, sign_type=sign_type)
+
+    def _program_image(self, image_path, flash_address, status_text, ok_text, fail_text):
         if not self.cubeprog_bin or not os.path.isdir(self.cubeprog_bin):
             messagebox.showerror(
                 "STM32CubeProgrammer no encontrado",
@@ -406,42 +462,176 @@ class FlashToolApp:
             "-el",
             loader_path,
             "-w",
-            trusted,
-            FLASH_ADDRESS,
+            image_path,
+            flash_address,
             "-v",
         ]
 
-        self._set_busy(True, "Programando flash externa via ST-LINK...")
+        self._set_busy(True, status_text)
 
         def after_flash(ok):
             if ok:
-                self._set_busy(False, "Programacion completada correctamente.")
-                messagebox.showinfo(
-                    "Listo",
-                    "Binario programado y verificado en la flash externa.\n"
-                    "Si quieres que el MCU corra ahora, usa el boton 'Reset MCU', "
-                    "o cambia los switches BOOT a modo flash y presiona el boton de reset fisico.",
-                )
-            else:
-                self._set_busy(False, "Fallo la programacion. Revisa el log.")
-                self._log(
-                    "\n[SUGERENCIAS]\n"
-                    "  - Si el error es 'failed to erase memory': switches BOOT0/BOOT1 deben\n"
-                    "    estar en modo desarrollo (BOOT1=2-3) mientras programas por ST-LINK.\n"
-                    "  - Si el error es 'Unable to run MCU' / 'MCU Reset Error': la escritura y\n"
-                    "    verificacion probablemente SI funcionaron; solo fallo el intento de\n"
-                    "    reiniciar y correr el MCU justo despues. Usa el boton 'Reset MCU' por\n"
-                    "    separado, o ignora el error si solo vas a probar el boot fisicamente.\n"
-                    "  - Prueba bajar la frecuencia SWD a 1000-4000 KHz o cambiar el connect "
-                    "mode (NORMAL/UR/HOTPLUG)."
-                )
-                messagebox.showerror(
-                    "Error de programacion",
-                    "Fallo al programar o al reiniciar el MCU (revisa el log para "
-                    "sugerencias).",
-                )
+                self._set_busy(False, ok_text)
+                messagebox.showinfo("Listo", ok_text)
+                return
+
+            self._set_busy(False, fail_text)
+            self._log(
+                "\n[SUGERENCIAS]\n"
+                "  - Si el error es 'failed to erase memory': revisa los switches BOOT0/BOOT1.\n"
+                "  - Si el error es 'Unable to run MCU' / 'MCU Reset Error': la escritura y\n"
+                "    verificacion pueden haber funcionado; solo fallo el reset.\n"
+                "  - Prueba bajar la frecuencia SWD a 1000-4000 KHz o cambiar el connect mode."
+            )
+            messagebox.showerror("Error de programacion", fail_text)
 
         self._run_command(cmd, cwd=self.cubeprog_bin, on_done=after_flash)
+
+    # ------------------------------------------------------------ actions --
+
+    def _run_command(self, cmd, cwd, on_done):
+        """Ejecuta cmd en un hilo aparte, redirigiendo la salida al log."""
+
+        def worker():
+            self._log(f"\n$ {' '.join(cmd)}")
+            try:
+                proc = subprocess.Popen(
+                    cmd,
+                    cwd=cwd,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                    bufsize=1,
+                )
+            except OSError as exc:
+                self._log(f"[ERROR] No se pudo ejecutar el comando: {exc}")
+                self.root.after(0, lambda: on_done(False))
+                return
+
+            for line in proc.stdout:
+                self._log(line.rstrip())
+            proc.wait()
+            ok = proc.returncode == 0
+            if not ok:
+                self._log(f"[ERROR] Comando terminado con codigo {proc.returncode}")
+            self.root.after(0, lambda: on_done(ok))
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _on_generate_fsbl(self):
+        if self.busy:
+            return
+
+        self._set_busy(True, "Compilando FSBL y generando trusted.bin...")
+
+        def after_build(ok):
+            if not ok:
+                self._set_busy(False, "Fallo la compilacion.")
+                messagebox.showerror("Error", "Fallo la compilacion. Revisa el log.")
+                return
+            trusted = self._find_trusted_bin("FSBL")
+            if trusted:
+                self._log(f"\nOK -> {trusted}")
+                self._set_busy(False, f"trusted.bin generado: {os.path.basename(trusted)}")
+            else:
+                self._set_busy(
+                    False,
+                    "Compilacion OK pero no se encontro *_trusted.bin "
+                    "(revisa STM32_SigningTool_CLI en el log).",
+                )
+
+        self._build_project("FSBL", after_build, friendly_name="FSBL")
+
+    def _on_generate_appns(self):
+        if self.busy:
+            return
+
+        def after_build(ok, source_dir, build_dir):
+            if not ok:
+                self._set_busy(False, "Fallo la compilacion de AppNonSecure.")
+                messagebox.showerror(
+                    "Error",
+                    "Fallo la compilacion de AppNonSecure. Revisa el log y verifica que exista Secure_nsclib.",
+                )
+                return
+
+            try:
+                signed = self._prepare_signed_image("AppliNonSecure", sign_type="fsbl")
+            except Exception as exc:
+                self._set_busy(False, "Fallo la firma de AppNonSecure.")
+                messagebox.showerror("Error", str(exc))
+                return
+
+            if signed:
+                self._log(f"\nOK -> {signed}")
+                self._set_busy(False, f"AppNS trusted.bin generado: {os.path.basename(signed)}")
+            else:
+                self._set_busy(False, "Compilacion OK pero no se encontro ningun .elf/.bin para AppNonSecure.")
+
+        self._set_busy(True, "Compilando AppNonSecure y generando trusted.bin...")
+        self._build_project("AppliNonSecure", after_build, friendly_name="AppNonSecure")
+
+    def _on_program_fsbl(self):
+        if self.busy:
+            return
+
+        trusted = self._find_trusted_bin("FSBL")
+        if not trusted:
+            messagebox.showerror(
+                "Falta trusted.bin",
+                "No se encontro ningun *_trusted.bin en FSBL/build.\n"
+                "Presiona primero '1) Generar FSBL trusted.bin'.",
+            )
+            return
+
+        self._program_image(
+            image_path=trusted,
+            flash_address=FSBL_FLASH_ADDRESS,
+            status_text="Programando FSBL firmado via ST-LINK...",
+            ok_text="FSBL programado y verificado correctamente.",
+            fail_text="Fallo al programar el FSBL (revisa el log para sugerencias).",
+        )
+
+    def _on_program_appns(self):
+        if self.busy:
+            return
+
+        self._set_busy(True, "Compilando AppNonSecure, firmando y preparando la programacion...")
+
+        def after_build(ok, source_dir, build_dir):
+            if not ok:
+                self._set_busy(False, "Fallo la compilacion de AppNonSecure.")
+                messagebox.showerror(
+                    "Error",
+                    "Fallo la compilacion de AppNonSecure. Revisa el log y verifica que exista Secure_nsclib.",
+                )
+                return
+
+            try:
+                appns = self._prepare_signed_image("AppliNonSecure", sign_type="fsbl")
+            except Exception as exc:
+                self._set_busy(False, "Fallo la firma de AppNonSecure.")
+                messagebox.showerror("Error", str(exc))
+                return
+
+            if not appns:
+                self._set_busy(False, "No se pudo generar el trusted.bin de AppNonSecure.")
+                messagebox.showerror(
+                    "Falta AppNS trusted.bin",
+                    "No se encontro ni se pudo generar el trusted.bin de AppNonSecure.\n"
+                    "Revisa la compilacion y el log.",
+                )
+                return
+
+            self._program_image(
+                image_path=appns,
+                flash_address=APPNS_FLASH_ADDRESS,
+                status_text="Programando AppNonSecure firmado via ST-LINK...",
+                ok_text="AppNonSecure programado y verificado correctamente.",
+                fail_text="Fallo al programar AppNonSecure (revisa el log para sugerencias).",
+            )
+
+        self._build_project("AppliNonSecure", after_build, friendly_name="AppNonSecure")
 
     def _on_reset(self):
         if self.busy:

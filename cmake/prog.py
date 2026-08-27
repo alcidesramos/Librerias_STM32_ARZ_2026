@@ -1,11 +1,8 @@
 #!/usr/bin/env python3
 """
-Flashea automaticamente el .elf del proyecto STM32 abierto.
+Flashea automaticamente el .elf mas reciente del proyecto STM32 abierto.
 
-Uso:
-  python prog.py
-  python prog.py --tool openocd
-  python prog.py --elf build/Debug/LED_ARZ.elf
+
 """
 
 from __future__ import annotations
@@ -30,16 +27,13 @@ def find_elf(project_root: Path, elf_arg: str | None) -> Path:
             raise FileNotFoundError(f"No existe el archivo ELF indicado: {elf_path}")
         return elf_path
 
-    search_patterns = [
-        "build/Debug/*.elf",
-        "build/**/Debug/*.elf",
-        "build/**/*.elf",
-        "**/*.elf",
-    ]
+    build_root = project_root / "build"
+    if not build_root.exists():
+        raise FileNotFoundError(
+            f"No se encontro la carpeta build en: {project_root}"
+        )
 
-    candidates: list[Path] = []
-    for pattern in search_patterns:
-        candidates.extend(project_root.glob(pattern))
+    candidates = [path for path in build_root.rglob("*.elf") if path.is_file()]
 
     # Limpia duplicados y evita rutas internas de CMake.
     unique_candidates = []
@@ -144,7 +138,11 @@ def main() -> int:
     )
 
     args = parser.parse_args()
-    project_root = Path(__file__).resolve().parent
+    project_root = Path.cwd().resolve()
+    if not (project_root / "build").exists():
+        script_root = Path(__file__).resolve().parent
+        if (script_root / "build").exists():
+            project_root = script_root
 
     try:
         elf_path = find_elf(project_root, args.elf)
