@@ -24,7 +24,7 @@ en el while principal si usa DMA
         sprintf(buffer, "ADC Values: %u, %u, %u, %u\r\n", adc1_codigo[0], adc1_codigo[1], adc1_codigo[2], adc1_codigo[3]);
         //manda serial si desea
         uartx_write_text(&huart1, buffer);
-        //activa nueva lectura adc
+        //activa nueva lectura adc obligatorio
         ADC_Read_DMA(&hadc1, adc1_canales, adc1_codigo);
 
     }
