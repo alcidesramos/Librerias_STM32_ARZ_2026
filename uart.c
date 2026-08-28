@@ -24,6 +24,12 @@ while(*info)  uartx_write(huart,*info++);
 }
 
 
+void uartx_write_buffer(UART_HandleTypeDef *huart, uint8_t *buffer, uint16_t len)
+{
+    HAL_UART_Transmit(huart, buffer, len, 0xFFFF);
+}
+
+
 char uartx_read(UART_HandleTypeDef *huart)
 {
 	uint8_t dato_rx_=0;

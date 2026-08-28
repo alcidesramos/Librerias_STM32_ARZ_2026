@@ -21,6 +21,7 @@ extern "C" {
 
 void uartx_write(UART_HandleTypeDef *huart,uint8_t ch);
 void uartx_write_text(UART_HandleTypeDef *huart, char *info);
+void uartx_write_buffer(UART_HandleTypeDef *huart, uint8_t *buffer, uint16_t len);
 char uartx_read(UART_HandleTypeDef *huart);
 void uartx_read_text(UART_HandleTypeDef *huart,char  *info,const char final,char cuanto);
 
