@@ -34,13 +34,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 void TIMER_PROCEDIMIENTOS()
 {
 	//COLOQUE LOS PROCEDIMIENTOS  USAR ACORDE  SENSORES
-	         MPU6050_lee_datos();
-	         MPU6050_calcula_flotantes();
-
-	  	     MPU6050_Ace_angulos();
-			  MPU6050_Giro_angulos();
-			  Filtro_Complementario(0.98);
-			  filtro_kalman();
+	     
 }
 
 void TIMER_INIT()

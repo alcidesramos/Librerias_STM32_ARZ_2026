@@ -9,8 +9,8 @@
 #define LIBRERIAS_TIMER_H_
 
 #include "main.h"
-//incluya libreria de sensores usados en la interrpcion del timer
-#include "MPU6050.h"
+//incluya libreria de sensores usados en la interrupcion del timer
+
 
 
 //DEFINA TIMER A USAR
