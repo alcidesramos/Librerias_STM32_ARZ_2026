@@ -14,7 +14,6 @@
 
 //DEFINE LOS USART  A USAR
 extern UART_HandleTypeDef huart1;
-extern UART_HandleTypeDef huart2;
 
 //inciar uart de recepcion por interrupcion  y tamaño del buffer
 UARTRXS UARTRX1 = {&huart1,USART1,100};
