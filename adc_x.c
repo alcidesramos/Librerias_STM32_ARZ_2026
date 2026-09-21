@@ -16,10 +16,24 @@ uint8_t adc1_flag = 0; //flag de conversion del adc
 uint16_t ADC_Read(ADC_HandleTypeDef  *adc_n)
 {
 	HAL_ADC_Start(adc_n);
-	HAL_ADC_PollForConversion(adc_n,1000);
+	HAL_ADC_PollForConversion(adc_n,100);
 	HAL_ADC_Stop(adc_n);
 	return (HAL_ADC_GetValue(adc_n));
 }
+
+void ADC_Read_All (ADC_HandleTypeDef  *adc_n,uint8_t adc_num,uint16_t *adc_codigo)
+{
+	HAL_ADC_Start(adc_n);
+	for(uint8_t i=0;i<adc_num;i++)
+	{
+		HAL_ADC_PollForConversion(adc_n,100);
+		adc_codigo[i] = HAL_ADC_GetValue(adc_n);
+	}
+	
+	HAL_ADC_Stop(adc_n);
+	
+}
+
 
 void ADC_Read_DMA (ADC_HandleTypeDef  *adc_n,uint8_t adc_num,uint16_t *adc_codigo)
 {

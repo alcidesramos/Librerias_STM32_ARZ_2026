@@ -34,7 +34,7 @@ void PID_DIR_INIT()
 //kaw=0.5ki  a 1.0ki control agresivo
 	PID_DIR.Kaw=0.5*PID_DIR.Ki; //control saturacion integral
 
-	PID_DIR.aw_term=0;   //ventana contorl de saturacion inetgral   dejar en cero
+	PID_DIR.aw_term=0;   //ventana contorl de saturacion inetgral
    PID_Reset(&PID_DIR);  //RESETEA PARAMETROS
 }
 //colocar mas INIT por cada PID usado
@@ -79,47 +79,6 @@ float PID_Control(PID_ *pid, float input)
 
         return pid->output;
 
-}
-
-// Version basica del PID 
-float PID_Control_Basic(PID_ *pid, float input)
-{
-    pid->error = pid->setpoint - input;
-
-    //  Parte proporcional
-    pid->up = pid->Kp * pid->error;
-
-    //  Parte derivativa 
-    pid->ud = pid->Kd * (pid->error - pid->prev_error) / pid->Ts;
-
-    //  calcula una salida temporar para detectar si se satura o no el sistema
-    //  y si despues debo integrar o no
-    float output_candidato = pid->up + pid->ui + pid->ud;
-
-    //se bloqueo la  integral si YA esta saturada Y el error sigue empujando hacia
-    //  ese mismo lado (si el error ya cambio de signo, se deja integrar
-    //  para permitir salir de la saturacion mas rapido)
-    bool saturado_arriba = (output_candidato > pid->out_max) && (pid->error > 0.0f);
-    bool saturado_abajo  = (output_candidato < pid->out_min) && (pid->error < 0.0f);
-
-    //  Parte integral  calculado solo si no se satura la salida
-    if (!(saturado_arriba || saturado_abajo))
-    {
-        pid->ui += pid->Ki * pid->Ts * pid->error;
-    }
-
-    //  salida PID (con ui ya actualizado o congelado segun el caso)
-    float output = pid->up + pid->ui + pid->ud;
-
-    //  Saturar
-    float output_sat = output;
-    if (output_sat > pid->out_max) output_sat = pid->out_max;
-    if (output_sat < pid->out_min) output_sat = pid->out_min;
-
-    pid->prev_error = pid->error;
-    pid->output = output_sat;
-
-    return pid->output;
 }
 
 //

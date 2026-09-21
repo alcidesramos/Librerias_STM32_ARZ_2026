@@ -5,6 +5,9 @@
  *      Author: Alcides Ramos
  */
 #include "I2C_SCAN_BUS.h"
+#include "uart.h"
+#include "string.h"
+#include "stdio.h"
 
 
 //DEBE PONERSE <<1  A LA DIRECCION ENCONTRADA MICRO

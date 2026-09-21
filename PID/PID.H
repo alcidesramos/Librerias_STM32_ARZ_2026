@@ -12,11 +12,8 @@
 #include "main.h"
 #include "math.h"
 #include "stdbool.h"
-
-typedef enum {
-    PID_MODE_STANDARD = 0,   // PID clásico con integral y derivada filtrada
-    PID_MODE_INCREMENTAL     // PID discreto incremental
-} PID_Mode_t;
+//comentar si no se usa
+extern float velo_basica;
 
 typedef struct {
     // Parámetros PID
@@ -36,61 +33,66 @@ typedef struct {
     // Estado interno
     float error;
     float prev_error;
-    float prev2_error;
-    float integral;
+    float up;
+    float ui;
     float output;
 
     // Derivada filtrada
     float prev_input;
-    float D;
+    float ud;
 
     // Anti-windup (back-calculation)
     bool anti_windup;
     float Kaw;       // constante de back-calculation
     float aw_term;
 
-    // Modo
-    PID_Mode_t mode;
-} PID_t;
+} PID_;
 
-// Inicializa el PID
-void PID_Init(PID_t *pid,
+extern PID_  PID_DIR;
+extern PID_  PID_VEL;
+
+
+void PID_Init(PID_ *pid,
               float Kp,
               float Ki,
               float Kd,
               float Ts,
-              float Tau,
               float out_min,
               float out_max,
               float setpoint,
-              bool anti_windup,
-              float Kaw,
-              PID_Mode_t mode);
+//Tau=ts  respuesta rapida (señal sin ruido)
+//Tau=5ts  respuesta media suviza la derivada filtra (señal algo ruido)
+//Tau=10ts  respuesta lenta pero suaviza mas (Señal mucho ruido)
+			  float Tau,
+//kaw=0.1ki  control suave sin tanta saturacion;
+//kaw=0.3ki  control rapido algunas saturaciones;
+//kaw=0.5ki  a 1.0ki control agresivo
+			  float Kaw,
+//se calcula automatico inicia siempre en cero
+// muestra cuánto está saturando la salida
+			 float aw,
+			 float up,
+			 float ud,
+			 float ui,
+			 float ut);
 
-float PID_Compute(PID_t *pid, float input);
-void PID_Reset(PID_t *pid);
+
+float PID_Control(PID_ *pid, float input);
+float PID_Control_Basic(PID_ *pid, float input);
+void PID_Reset(PID_ *pid);
 
 #endif 
 /*
-// Parámetros del PID
-    float Ts   = 0.02f;    // 20 ms
-    float Tau  = 0.02f;    // Filtro derivativo (20 ms)
-    float Kaw  = 800.0f;   // Constante de back-calculation
-
-    PID_Init(&pid_velocidad,
-             189.0f, 3517.0f, 0.09f,   // Kp, Ki, Kd
-             Ts, Tau,
-             1300.0f, 4200.0f,         // límites PWM
-             0.0f,                     // setpoint inicial
-             true, Kaw,                // anti-windup activado
-             PID_MODE_STANDARD);       // Modo clásico con derivada filtrada
 
 
+//se llama asi
+ //EN EL MAIN
+ PID_DIR_INIT(&PID_DIR);
 
-//se lalma asi
- pid_velocidad.setpoint = setpoint;
 
-        float salida = PID_Compute(&pid_velocidad, entrada);
-        PWM_valor(&PWM1, salida);
+ //EN EL WHILE
+ PID_VEL.setpoint=1.5;
 
-/* SRC_LIBRERIAS_PID_H_ */
+float SALIDA=PID_Control(&PID_DIR,error);
+
+*/

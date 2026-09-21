@@ -78,7 +78,6 @@ void PID_Init(PID_ *pid,
 
 
 float PID_Control(PID_ *pid, float input);
-float PID_Control_Basic(PID_ *pid, float input);
 void PID_Reset(PID_ *pid);
 
 #endif 

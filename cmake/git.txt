@@ -1,0 +1,5 @@
+git config --global user.name "ALCIDES RAMOS ZAMBRANO "
+
+git config --global user.email "alcidesramos@yahoo.es"
+
+git config --list

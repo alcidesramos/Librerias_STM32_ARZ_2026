@@ -45,7 +45,7 @@ MAS COMPLETO
         {
         "name": "⚡FUSE ARZ",
         "color": "yellow",
-        "command": "python \"D:\\DATOS\\ARM\\STM32\\Librerias\\MIAS\\Librerias\\fuse.py\""
+        "command": "pythonw \"D:\\DATOS\\ARM\\STM32\\Librerias\\MIAS\\Librerias\\fuse.py\""
       },
        {
         "name": "💾FLASH ARZ",
