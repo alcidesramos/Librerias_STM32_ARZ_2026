@@ -59,7 +59,7 @@ ENCODERS ENCODER2 = {&htim3,TIM3};
  */
 typedef struct {
     TIM_HandleTypeDef *htim;
-    TIM_TypeDef *TIMX;
+    uint32_t TIMX;
     uint32_t pulsos;
     int32_t posicion;
     uint16_t resolucion;

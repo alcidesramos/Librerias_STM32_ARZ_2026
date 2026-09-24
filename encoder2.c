@@ -16,8 +16,8 @@ ENCODERS ENCODER1 = {&htim2,TIM2};
 ENCODERS ENCODER2 = {&htim5,TIM5};
 
 //define direccion de giro encoders
-#define ENCODER1_DIR   1
-#define ENCODER2_DIR  -1
+#define ENCODER1_DIR   -1
+#define ENCODER2_DIR  1
 
 #define TIMER_BITS 32   //  #bits timer  usado
 
