@@ -21,25 +21,13 @@ extern TIM_HandleTypeDef htim3;
 ENCODERS ENCODER1 = {&htim1,TIM1};
 ENCODERS ENCODER2 = {&htim3,TIM3};
 
- //en el procedimeinto Encoder_velo
-  incluir los encoder a analizar velocidad
-  		//repetir por cada encoder que se quiera saber velocidad
-		ENCODER2.velo=ENCODER2.velo-ENCODER2.velo_ant;
-		ENCODER2.velo_ant=ENCODER2.velo;
-		ENCODER2.velocidad=ENCODER2.velo/0.5; //2200ms 0.2seg
-
-	    //colocar otro encoder si se desea
-			ENCODER1.velo=ENCODER1.velo-ENCODER1.velo_ant;
-			ENCODER1.velo_ant=ENCODER1.velo;
-			ENCODER1.velocidad=ENCODER1.velo/0.5; //500ms  0.5seg
-
-
-			//va al final
-			encoder_velo=0;//limpia el encoder
+ //en encoder.c definir ENCODERx_DIR (signo posicion) y ENCODERx_VEL (signo velocidad)
+ //y en el procedimiento Encoder_velo agregar una linea por cada encoder:
+    Encoder_actualiza(&ENCODER1, ENCODER1_DIR, ENCODER1_VEL, Ts);
 
  */
 /*
- en el archivo "stm32f4xx_it.c"
+ en el archivo "stm32h5xx_it.c"
  en el procedimeinto SysTick_Handler
  llamar a
  Encoder_velo();
@@ -48,24 +36,26 @@ ENCODERS ENCODER2 = {&htim3,TIM3};
  */
 /*
  en el main .c
- //inicar los encoder  normalmente 4x pero si desea 2x  buen puede
-  Encoder_init(&ENCODER1, 4);
-  Encoder_init(&ENCODER2, 4);
+ //inicar los encoder  normalmente 4x pero si desea 2x  tambien puede y por ultimpo #bits el timer 16 o 32 bits
+  Encoder_init(&ENCODER1, 4,16);
+  Encoder_init(&ENCODER2, 4,32);
 
   // ya puede usar las variales dle encodre ejemplo
-   sprintf(texto,"PUL1=%d  PUL2=%d  vel1=%.1f\r\n\r\n",ENCODER2.posicion,ENCODER1.posicion,ENCODER2.velocidad);
+  sprintf(texto,"PUL1=%d  PUL2=%d  vel1=%.4f   vel2=%.4f\r\n\r\n",ENCODER1.posicion,ENCODER2.posicion,ENCODER1.velocidad,ENCODER2.velocidad);
   uartx_write_text(&huart1, texto);
   HAL_Delay(100);
  */
 typedef struct {
     TIM_HandleTypeDef *htim;
     TIM_TypeDef *TIMX;
-    uint32_t pulsos;
-    int32_t posicion;
-    uint16_t resolucion;
-    int32_t velo;
-    int32_t velo_ant;
-    float velocidad;
+    uint32_t pulsos;      //valor crudo del contador del timer
+    int32_t posicion;     //cuenta / resolucion (signo segun ENCODERx_DIR)
+    uint16_t resolucion;  //4 = modo x4, 2 = modo x2
+    int32_t velo;         //pulsos en el ultimo periodo de muestreo
+    int32_t velo_ant;     //contador en la muestra anterior
+    float velocidad;      //pulsos/resolucion por segundo (signo segun ENCODERx_VEL)
+    uint8_t numbits;      //16 o 32 bits del timer
+    int32_t cuenta;       //pulsos acumulados (signo segun ENCODERx_DIR)
 } ENCODERS;
 
 extern ENCODERS ENCODER1;
@@ -73,7 +63,7 @@ extern ENCODERS ENCODER2;
 extern ENCODERS ENCODER3;
 extern ENCODERS ENCODER4;
 
-void Encoder_init(ENCODERS *encoder,uint16_t resol);
+void Encoder_init(ENCODERS *encoder,uint16_t resol,uint8_t numebits);
 void Encoder_velo();
 
 

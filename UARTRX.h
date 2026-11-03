@@ -36,6 +36,7 @@ extern UARTRXS   UARTRX7;
 extern UARTRXS   UARTRX8;
 extern UARTRXS   UARTNEXTION;
 extern UARTRXS   GPS_UARTRX;
+extern UARTRXS   MQTT_UARTRX;
 
 //definir en el  UART1RX1.c los uart a usar
 /*
